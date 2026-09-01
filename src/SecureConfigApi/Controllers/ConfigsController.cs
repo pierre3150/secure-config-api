@@ -22,10 +22,18 @@ public class ConfigsController : ControllerBase
         return Ok(await _configService.GetAllAsync(environment));
     }
 
-    /// <summary>Get the decrypted value for a specific key + environment.</summary>
-    [HttpGet("{key}")]
-    public async Task<ActionResult<string>> GetValue(string key, [FromQuery] string environment = "production")
+    /// <summary>
+    /// Get the decrypted value for a specific key + environment.
+    /// Key is passed as a query parameter (not a route segment) because config
+    /// keys commonly contain colons (e.g. "Smtp:Password", the standard .NET
+    /// configuration convention), which are unsafe as raw URL path segments.
+    /// </summary>
+    [HttpGet("value")]
+    public async Task<ActionResult<string>> GetValue([FromQuery] string key, [FromQuery] string environment = "production")
     {
+        if (string.IsNullOrWhiteSpace(key))
+            return BadRequest("Key is required.");
+
         var value = await _configService.GetDecryptedValueAsync(key, environment);
         return value is null ? NotFound() : Ok(new { key, environment, value });
     }
@@ -41,9 +49,12 @@ public class ConfigsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("{key}")]
-    public async Task<IActionResult> Delete(string key, [FromQuery] string environment = "production")
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] string key, [FromQuery] string environment = "production")
     {
+        if (string.IsNullOrWhiteSpace(key))
+            return BadRequest("Key is required.");
+
         var deleted = await _configService.DeleteAsync(key, environment);
         return deleted ? NoContent() : NotFound();
     }

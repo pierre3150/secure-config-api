@@ -30,13 +30,15 @@ tests/SecureConfigApi.Tests/
 
 ## Endpoints
 
-| Méthode | Route                 | Description                               |
-|---------|------------------------|--------------------------------------------|
-| GET     | `/api/configs`         | Liste les clés (métadonnées uniquement)    |
-| GET     | `/api/configs/{key}`   | Récupère la valeur déchiffrée              |
-| POST    | `/api/configs`         | Crée ou met à jour une entrée (chiffrée)   |
-| DELETE  | `/api/configs/{key}`   | Supprime une entrée                        |
-| GET     | `/health`               | Health check (utilisé par Render)          |
+| Méthode | Route                              | Description                               |
+|---------|--------------------------------------|--------------------------------------------|
+| GET     | `/api/configs`                     | Liste les clés (métadonnées uniquement)    |
+| GET     | `/api/configs/value?key=&environment=` | Récupère la valeur déchiffrée          |
+| POST    | `/api/configs`                     | Crée ou met à jour une entrée (chiffrée)   |
+| DELETE  | `/api/configs?key=&environment=`   | Supprime une entrée                        |
+| GET     | `/health`                           | Health check (utilisé par Render)          |
+
+La clé est passée en query string (pas en segment d'URL) car les clés de config suivent la convention .NET avec des `:` (ex. `Smtp:Password`), non sûrs dans un path brut.
 
 ## Lancer en local
 

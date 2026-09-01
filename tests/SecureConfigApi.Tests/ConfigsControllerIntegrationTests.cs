@@ -47,14 +47,14 @@ public class ConfigsControllerIntegrationTests : IClassFixture<WebApplicationFac
         var postResponse = await _client.PostAsJsonAsync("/api/configs", dto);
         Assert.Equal(HttpStatusCode.OK, postResponse.StatusCode);
 
-        var getResponse = await _client.GetAsync("/api/configs/Test:Key?environment=production");
+        var getResponse = await _client.GetAsync("/api/configs/value?key=Test:Key&environment=production");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
     }
 
     [Fact]
     public async Task Get_UnknownKey_ReturnsNotFound()
     {
-        var response = await _client.GetAsync("/api/configs/does-not-exist");
+        var response = await _client.GetAsync("/api/configs/value?key=does-not-exist");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
