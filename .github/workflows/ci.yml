@@ -32,7 +32,27 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
+        id: run_tests
         run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+
+      - name: Report failing tests as annotations
+        if: failure() && steps.run_tests.outcome == 'failure'
+        run: |
+          python3 - <<'PYEOF'
+          import glob, xml.etree.ElementTree as ET
+
+          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+          files = glob.glob('**/test-results.trx', recursive=True)
+          for f in files:
+              tree = ET.parse(f)
+              root = tree.getroot()
+              for r in root.findall('.//t:UnitTestResult', ns):
+                  if r.get('outcome') == 'Failed':
+                      name = r.get('testName')
+                      msg_el = r.find('.//t:Message', ns)
+                      msg = (msg_el.text or '').replace('\n', ' ').replace('%', '%25').replace('\r','') if msg_el is not None else 'no message'
+                      print(f"::error::FAILED TEST: {name} | {msg}")
+          PYEOF
 
       - name: Publish test results
         uses: dorny/test-reporter@v1
@@ -41,6 +61,7 @@ jobs:
           name: xUnit Tests
           path: '**/test-results.trx'
           reporter: dotnet-trx
+          fail-on-error: false
 
   docker-build:
     name: Docker image build check
