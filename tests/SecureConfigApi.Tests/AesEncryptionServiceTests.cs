@@ -57,12 +57,27 @@ public class AesEncryptionServiceTests
     [Fact]
     public void Decrypt_WithWrongKey_ThrowsOrProducesGarbage()
     {
+        // AES-CBC/PKCS7 padding means a wrong key usually (but not always,
+        // ~1/256 chance) throws a CryptographicException on invalid padding.
+        // The security property we actually care about is that the wrong key
+        // never recovers the original plaintext - whether via exception or garbage.
         var serviceA = CreateService("key-one");
         var serviceB = CreateService("key-two");
+        const string original = "sensitive-data";
 
-        var encrypted = serviceA.Encrypt("sensitive-data");
+        var encrypted = serviceA.Encrypt(original);
 
-        Assert.ThrowsAny<Exception>(() => serviceB.Decrypt(encrypted));
+        string? decrypted = null;
+        var exception = Record.Exception(() => decrypted = serviceB.Decrypt(encrypted));
+
+        if (exception is null)
+        {
+            Assert.NotEqual(original, decrypted);
+        }
+        else
+        {
+            Assert.IsAssignableFrom<Exception>(exception);
+        }
     }
 
     [Theory]
