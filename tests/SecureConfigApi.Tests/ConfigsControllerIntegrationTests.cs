@@ -45,10 +45,16 @@ public class ConfigsControllerIntegrationTests : IClassFixture<WebApplicationFac
         var dto = new ConfigEntryDto("Test:Key", "test-value", "production");
 
         var postResponse = await _client.PostAsJsonAsync("/api/configs", dto);
-        Assert.Equal(HttpStatusCode.OK, postResponse.StatusCode);
+        var postBody = await postResponse.Content.ReadAsStringAsync();
+        Assert.True(postResponse.StatusCode == HttpStatusCode.OK, $"POST failed: {postResponse.StatusCode} body={postBody}");
+
+        var listResponse = await _client.GetAsync("/api/configs?environment=production");
+        var listBody = await listResponse.Content.ReadAsStringAsync();
 
         var getResponse = await _client.GetAsync("/api/configs/value?key=Test:Key&environment=production");
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var getBody = await getResponse.Content.ReadAsStringAsync();
+        Assert.True(getResponse.StatusCode == HttpStatusCode.OK,
+            $"GET failed: status={getResponse.StatusCode} getBody={getBody} | postBody={postBody} | listBody={listBody}");
     }
 
     [Fact]
