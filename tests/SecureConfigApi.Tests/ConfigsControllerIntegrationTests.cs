@@ -16,6 +16,13 @@ public class ConfigsControllerIntegrationTests : IClassFixture<WebApplicationFac
 
     public ConfigsControllerIntegrationTests(WebApplicationFactory<Program> factory)
     {
+        // IMPORTANT: the database name must be generated ONCE, outside the
+        // AddDbContext options delegate. AddDbContext invokes that delegate
+        // again for every new scope (i.e. every HTTP request), so calling
+        // Guid.NewGuid() inline would silently hand each request its own
+        // empty in-memory database, breaking any POST-then-GET round trip.
+        var dbName = $"IntegrationTests-{Guid.NewGuid()}";
+
         var customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
@@ -25,7 +32,7 @@ public class ConfigsControllerIntegrationTests : IClassFixture<WebApplicationFac
                 if (descriptor is not null) services.Remove(descriptor);
 
                 services.AddDbContext<AppDbContext>(options =>
-                    options.UseInMemoryDatabase($"IntegrationTests-{Guid.NewGuid()}"));
+                    options.UseInMemoryDatabase(dbName));
             });
         });
 
@@ -45,16 +52,13 @@ public class ConfigsControllerIntegrationTests : IClassFixture<WebApplicationFac
         var dto = new ConfigEntryDto("Test:Key", "test-value", "production");
 
         var postResponse = await _client.PostAsJsonAsync("/api/configs", dto);
-        var postBody = await postResponse.Content.ReadAsStringAsync();
-        Assert.True(postResponse.StatusCode == HttpStatusCode.OK, $"POST failed: {postResponse.StatusCode} body={postBody}");
-
-        var listResponse = await _client.GetAsync("/api/configs?environment=production");
-        var listBody = await listResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, postResponse.StatusCode);
 
         var getResponse = await _client.GetAsync("/api/configs/value?key=Test:Key&environment=production");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+
         var getBody = await getResponse.Content.ReadAsStringAsync();
-        Assert.True(getResponse.StatusCode == HttpStatusCode.OK,
-            $"GET failed: status={getResponse.StatusCode} getBody={getBody} | postBody={postBody} | listBody={listBody}");
+        Assert.Contains("test-value", getBody);
     }
 
     [Fact]
